@@ -84,26 +84,56 @@ void triangle(int coords[3][2], tgaColor color, tgaImage *image) {
     }
 }
 
+void getNormal_(const Vec3 *(planePoints[]), double *normal) {
+    double p1x = (*(planePoints[0]))[0];
+    double p1y = (*(planePoints[0]))[1];
+    double p1z = (*(planePoints[0]))[2];
+    double p2x = (*(planePoints[1]))[0];
+    double p2y = (*(planePoints[1]))[1];
+    double p2z = (*(planePoints[1]))[2];
+    double p3x = (*(planePoints[2]))[0];
+    double p3y = (*(planePoints[2]))[1];
+    double p3z = (*(planePoints[2]))[2];
+    double ax = p2x - p1x, ay = p2y - p1y, az = p2z - p1z;
+    double bx = p3x - p1x, by = p3y - p1y, bz = p3z - p1z;
+    normal[0] = ay * bz - az * by;
+    normal[1] = az * bx - ax * bz;
+    normal[2] = ax * by - ay * bx;
+}
+
 void meshgrid(tgaImage *image, Model *model) {
     int i, j;
+    // nface - ����� ������
+    // faces[i] - i-�� �����
+    // ����� ������� 3�� �������
+    // ������ ����� - ��� 3 ���������� (x; y; z)
+    // ������� faces[i] �������� �������� �� 9 ��������� (�� 3 �� ������ �����)
     for (i = 0; i < model->nface; ++i) {
         int screen_coords[3][2]; // ��������� � �������� ����������
+        Vec3 *(facePoints[3]);
         for (j = 0; j < 3; ++j) {
             Vec3 *v = &(model->vertices[model->faces[i][3 * j]]);
+            facePoints[j] = *v;
             screen_coords[j][0] = ((*v)[0] + 1) * image->width / 2;
             screen_coords[j][1] = (1 - (*v)[1]) * image->height / 2;
         }
-
-        tgaColor color = tgaRGB(rand() % 256, rand() % 256, rand() % 256);
-
-        triangle(screen_coords, color, image);
-
-        /*
-        for (j = 0; j < 3; ++j) {
-            line(image, screen_coords[j][0], screen_coords[j][1],
-            screen_coords[(j + 1) % 3][0], screen_coords[(j + 1) % 3][1], white);
+        double N[3];
+        getNormal_(facePoints, N);
+        // ld ������ light direction
+        double ld[] = { 0., 0., -1. };
+        // (ax; ay; az) = ���������� �������
+        // (bx; by; bz) = ���������� ����������� ��������������� �����
+        // cos(teta) = (ax*bx + ay*by + az*bz) /
+        //             (sqrt(ax^2+ay^2+az^2)*sqrt(bx^2+by^2+bz^2))
+        double I = (N[0]*ld[0] + N[1]*ld[1] + N[2]*ld[2])
+            / (sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]) * sqrt(ld[0]*ld[0] + ld[1]*ld[1] + ld[2]*ld[2]));
+        if (I > 0) {
+            I = 0;
+        } else {
+            I = -I;
+            tgaColor color = tgaRGB((int)(I * 255), (int)(I * 255), (int)(I * 255));
+            triangle(screen_coords, color, image);
         }
-        */
     }	
 }
 
